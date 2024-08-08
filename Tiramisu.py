@@ -6,7 +6,7 @@ import PIL.ImageGrab as ImageGrab
 # Windows Setup
 window = Tk()
 #window.state("zoomed")
-window.size()
+window.geometry('1350x700')
 window.title("Tiramisu")
 
 # Variables
