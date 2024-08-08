@@ -1,11 +1,10 @@
 from tkinter import *
 from tkinter import colorchooser, filedialog, messagebox
-from PIL import Image, ImageDraw, ImageTk
+from PIL import Image, ImageDraw
 import PIL.ImageGrab as ImageGrab
 
 # Windows Setup
 window = Tk()
-#window.state("zoomed")
 window.geometry('1350x700')
 window.title("Tiramisu")
 
@@ -27,7 +26,7 @@ tool_frame_color = "#2a2a2a"
 def add_layer():
     global current_layer
     # Create a new canvas layer
-    layer = Canvas(window, bg="white", bd=0, relief=FLAT, height=580, width=1325, highlightthickness=0)
+    layer = Canvas(window, bg="white", bd=0, relief=FLAT, height=580, width=985, highlightthickness=0)
     layer.place(x=10, y=100)
     
     # Create an image for the new layer to store the drawing
@@ -154,23 +153,28 @@ size_frame = LabelFrame(window, text="Pixel Size", relief=FLAT, bg=tool_frame_co
 size_frame.place(x=770, y=10, width=224, height=60)
 
 layer_frame = LabelFrame(window, text="Layers", relief=FLAT, bg=tool_frame_color, fg=button_fg, font=("Arial", 12))
-layer_frame.place(x=1000, y=10, width=200, height=300)
+layer_frame.place(x=1000, y=10, width=300, height=580)
 
-# Layer listbox
-layer_list = Listbox(layer_frame, bg=tool_frame_color, fg=button_fg, selectbackground=highlight_bg, font=("Arial", 10))
-layer_list.pack(fill=BOTH, expand=True)
+# Layer listbox and buttons
+layer_frame_content = Frame(layer_frame, bg=tool_frame_color)
+layer_frame_content.pack(fill=BOTH, expand=True)
 
-# Layer buttons
-add_layer_btn = Button(layer_frame, text="Add Layer", relief=FLAT, bg=button_bg, fg=button_fg, command=add_layer)
+layer_list = Listbox(layer_frame_content, bg=tool_frame_color, fg=button_fg, selectbackground=highlight_bg, font=("Arial", 10))
+layer_list.pack(side=LEFT, fill=BOTH, expand=True)
+
+button_frame = Frame(layer_frame_content, bg=tool_frame_color)
+button_frame.pack(side=RIGHT, fill=Y)
+
+add_layer_btn = Button(button_frame, text="Add Layer", relief=FLAT, bg=button_bg, fg=button_fg, command=add_layer)
 add_layer_btn.pack(fill=X, pady=5)
 
-remove_layer_btn = Button(layer_frame, text="Remove Layer", relief=FLAT, bg=button_bg, fg=button_fg, command=remove_layer)
+remove_layer_btn = Button(button_frame, text="Remove Layer", relief=FLAT, bg=button_bg, fg=button_fg, command=remove_layer)
 remove_layer_btn.pack(fill=X, pady=5)
 
-duplicate_layer_btn = Button(layer_frame, text="Duplicate Layer", relief=FLAT, bg=button_bg, fg=button_fg, command=duplicate_layer)
+duplicate_layer_btn = Button(button_frame, text="Duplicate Layer", relief=FLAT, bg=button_bg, fg=button_fg, command=duplicate_layer)
 duplicate_layer_btn.pack(fill=X, pady=5)
 
-merge_layers_btn = Button(layer_frame, text="Merge Layers", relief=FLAT, bg=button_bg, fg=button_fg, command=merge_layers)
+merge_layers_btn = Button(button_frame, text="Merge Layers", relief=FLAT, bg=button_bg, fg=button_fg, command=merge_layers)
 merge_layers_btn.pack(fill=X, pady=5)
 
 # Add colors
@@ -184,7 +188,7 @@ for color in colors:
 
 # Custom Color Button
 custom_color_btn = Button(color_frame, text="Custom", relief=FLAT, bg=pen_color, fg=button_fg, command=choose_custom_color)
-custom_color_btn.grid(row=1, column=0, columnspan=5, pady=5, sticky="ew")
+custom_color_btn.grid(row=1, column=0, columnspan=6, pady=5, sticky="ew")
 
 # Tool Buttons
 canvas_color_b1 = Button(tool_frame, text="Canvas", relief=FLAT, bg=button_bg, fg=button_fg, command=CanvasColor)
