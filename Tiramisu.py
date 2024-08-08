@@ -5,6 +5,7 @@ import PIL.ImageGrab as ImageGrab
 
 # Windows Setup
 window = Tk()
+window.iconbitmap("tiramisu_icon.ico")
 window.geometry('1350x700')
 window.title("Tiramisu")
 
@@ -13,7 +14,10 @@ pen_color = "black"
 eraser_color = "white"
 pixel_size = 10  # Size of each pixel
 layers = []
+layer_names = []
 current_layer = None
+canvas_width = 985  # Updated canvas width
+canvas_height = 580  # Keep the height the same
 
 # Modern dark theme colors
 bg_color = "#2e2e2e"
@@ -26,32 +30,34 @@ tool_frame_color = "#2a2a2a"
 def add_layer():
     global current_layer
     # Create a new canvas layer
-    layer = Canvas(window, bg="white", bd=0, relief=FLAT, height=580, width=985, highlightthickness=0)
+    layer = Canvas(window, bg="white", bd=0, relief=FLAT, height=canvas_height, width=canvas_width, highlightthickness=0)
     layer.place(x=10, y=100)
     
     # Create an image for the new layer to store the drawing
-    layer.image = Image.new("RGBA", (1325, 580), (255, 255, 255, 0))
+    layer.image = Image.new("RGBA", (canvas_width, canvas_height), (255, 255, 255, 0))
     layer.draw = ImageDraw.Draw(layer.image)
     
     # Bind the Paint function to the new layer
     layer.bind("<B1-Motion>", Paint)
     
     layers.append(layer)
+    layer_names.append(f"Layer {len(layer_names) + 1}")
     current_layer = layer
     update_layers_list()
 
 def remove_layer():
     global current_layer
     if layers:
-        layer = layers.pop()
-        layer.destroy()
+        index = layers.index(current_layer)
+        layers.pop(index).destroy()
+        layer_names.pop(index)
         current_layer = layers[-1] if layers else None
         update_layers_list()
 
 def duplicate_layer():
     global current_layer
     if current_layer:
-        new_layer = Canvas(window, bg="white", bd=0, relief=FLAT, height=580, width=1325, highlightthickness=0)
+        new_layer = Canvas(window, bg="white", bd=0, relief=FLAT, height=canvas_height, width=canvas_width, highlightthickness=0)
         new_layer.place(x=10, y=100)
         
         # Copy image from current layer
@@ -62,13 +68,14 @@ def duplicate_layer():
         new_layer.bind("<B1-Motion>", Paint)
         
         layers.append(new_layer)
+        layer_names.append(f"Layer {len(layer_names) + 1}")
         current_layer = new_layer
         update_layers_list()
 
 def update_layers_list():
     layer_list.delete(0, END)
-    for i, layer in enumerate(layers):
-        layer_list.insert(END, f"Layer {i + 1}")
+    for i, name in enumerate(layer_names):
+        layer_list.insert(END, name)
     if current_layer:
         layer_list.selection_set(layers.index(current_layer))
 
@@ -81,7 +88,7 @@ def select_layer(event):
 def merge_layers():
     if len(layers) > 1:
         base_layer = layers[0]
-        base_image = Image.new("RGBA", (1325, 580), (255, 255, 255, 0))
+        base_image = Image.new("RGBA", (canvas_width, canvas_height), (255, 255, 255, 0))
         for layer in layers:
             base_image.paste(layer.image, (0, 0), layer.image)
         base_layer.image = base_image
@@ -89,7 +96,9 @@ def merge_layers():
         for layer in layers[1:]:
             layer.destroy()
         layers.clear()
+        layer_names.clear()
         layers.append(base_layer)
+        layer_names.append("Layer 1")
         current_layer = base_layer
         update_layers_list()
 
@@ -110,7 +119,7 @@ def Erase():
 def Clear():
     if current_layer:
         current_layer.delete("all")
-        current_layer.image.paste((255, 255, 255, 0), (0, 0, 1325, 580))
+        current_layer.image.paste((255, 255, 255, 0), (0, 0, canvas_width, canvas_height))
         current_layer.draw = ImageDraw.Draw(current_layer.image)
 
 # Canvas Configuration
@@ -141,6 +150,17 @@ def choose_custom_color():
     if color:
         pen_color = color
         custom_color_btn.config(bg=pen_color)
+
+def rename_layer():
+    if current_layer:
+        try:
+            selected_index = layers.index(current_layer)
+            new_name = layer_name_entry.get()
+            if new_name:
+                layer_names[selected_index] = new_name
+                update_layers_list()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to rename layer: {e}")
 
 # Frames
 color_frame = LabelFrame(window, text="Color", relief=FLAT, bg=tool_frame_color, fg=button_fg, font=("Arial", 12))
@@ -177,6 +197,12 @@ duplicate_layer_btn.pack(fill=X, pady=5)
 merge_layers_btn = Button(button_frame, text="Merge Layers", relief=FLAT, bg=button_bg, fg=button_fg, command=merge_layers)
 merge_layers_btn.pack(fill=X, pady=5)
 
+rename_layer_btn = Button(button_frame, text="Rename Layer", relief=FLAT, bg=button_bg, fg=button_fg, command=rename_layer)
+rename_layer_btn.pack(fill=X, pady=5)
+
+layer_name_entry = Entry(button_frame, bg=tool_frame_color, fg=button_fg, font=("Arial", 10))
+layer_name_entry.pack(fill=X, pady=5)
+
 # Add colors
 colors = ["#000000", "#0019ff", "#ff0000", "#edff00", "#00ff19", "#ffffff"]
 
@@ -188,7 +214,7 @@ for color in colors:
 
 # Custom Color Button
 custom_color_btn = Button(color_frame, text="Custom", relief=FLAT, bg=pen_color, fg=button_fg, command=choose_custom_color)
-custom_color_btn.grid(row=1, column=0, columnspan=6, pady=5, sticky="ew")
+custom_color_btn.grid(row=1, column=0, columnspan=5, pady=5, sticky="ew")
 
 # Tool Buttons
 canvas_color_b1 = Button(tool_frame, text="Canvas", relief=FLAT, bg=button_bg, fg=button_fg, command=CanvasColor)
