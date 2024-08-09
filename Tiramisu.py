@@ -6,6 +6,7 @@ import PIL.ImageGrab as ImageGrab
 # Windows Setup
 window = Tk()
 window.iconbitmap("tiramisu_icon.ico")
+window.resizable(False, False)
 window.geometry('1350x700')
 window.title("Tiramisu")
 
@@ -131,14 +132,18 @@ def CanvasColor():
     eraser_color = color[1]
 
 def Save():
-    file_name = filedialog.asksaveasfile(defaultextension=".jpg")
-    if file_name:
-        x = window.winfo_rootx() + layers[0].winfo_rootx()
-        y = window.winfo_rooty() + layers[0].winfo_rooty()
-        x1 = x + layers[0].winfo_width()
-        y1 = y + layers[0].winfo_height()
-        ImageGrab.grab().crop((x, y, x1, y1)).save(file_name)
-        messagebox.showinfo("Tiramisu", "Image Saved as " + str(file_name))
+    if layers:
+        base_image = Image.new("RGBA", (canvas_width, canvas_height), (255, 255, 255, 0))
+        for layer in layers:
+            base_image.paste(layer.image, (0, 0), layer.image)
+        
+        file_name = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG files", "*.png"), ("All files", "*.*")])
+        if file_name:
+            base_image.save(file_name, "PNG")
+            messagebox.showinfo("Tiramisu", f"Image Saved as {file_name}")
+    else:
+        messagebox.showwarning("Tiramisu", "No layers to save")
+
 
 def SelectColor(col):
     global pen_color
