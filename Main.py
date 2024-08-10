@@ -1,7 +1,7 @@
 from tkinter import *
 from tkinter import colorchooser, filedialog, messagebox
 from PIL import Image, ImageDraw
-import PIL.ImageGrab as ImageGrab
+#import PIL.ImageGrab as ImageGrab
 
 # Windows Setup
 window = Tk()
