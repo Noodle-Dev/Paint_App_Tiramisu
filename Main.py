@@ -1,7 +1,7 @@
 from tkinter import *
 from tkinter import colorchooser, filedialog, messagebox
-from PIL import Image, ImageDraw
-#import PIL.ImageGrab as ImageGrab
+from PIL import Image, ImageDraw, ImageTk, ImageColor  # Added ImageColor
+import numpy as np
 
 # Windows Setup
 window = Tk()
@@ -19,6 +19,8 @@ layer_names = []
 current_layer = None
 canvas_width = 985  # Updated canvas width
 canvas_height = 580  # Keep the height the same
+lasso_points = []
+lasso_active = False
 
 # Modern dark theme colors
 bg_color = "#2e2e2e"
@@ -30,17 +32,11 @@ tool_frame_color = "#2a2a2a"
 # Canvas management
 def add_layer():
     global current_layer
-    # Create a new canvas layer
     layer = Canvas(window, bg="white", bd=0, relief=FLAT, height=canvas_height, width=canvas_width, highlightthickness=0)
     layer.place(x=10, y=100)
-    
-    # Create an image for the new layer to store the drawing
     layer.image = Image.new("RGBA", (canvas_width, canvas_height), (255, 255, 255, 0))
     layer.draw = ImageDraw.Draw(layer.image)
-    
-    # Bind the Paint function to the new layer
     layer.bind("<B1-Motion>", Paint)
-    
     layers.append(layer)
     layer_names.append(f"Layer {len(layer_names) + 1}")
     current_layer = layer
@@ -60,14 +56,9 @@ def duplicate_layer():
     if current_layer:
         new_layer = Canvas(window, bg="white", bd=0, relief=FLAT, height=canvas_height, width=canvas_width, highlightthickness=0)
         new_layer.place(x=10, y=100)
-        
-        # Copy image from current layer
         new_layer.image = current_layer.image.copy()
         new_layer.draw = ImageDraw.Draw(new_layer.image)
-        
-        # Bind the Paint function to the new layer
         new_layer.bind("<B1-Motion>", Paint)
-        
         layers.append(new_layer)
         layer_names.append(f"Layer {len(layer_names) + 1}")
         current_layer = new_layer
@@ -105,7 +96,7 @@ def merge_layers():
 
 # Drawing on the current layer
 def Paint(event):
-    if current_layer:
+    if current_layer and not lasso_active:
         x1 = (event.x // pixel_size) * pixel_size
         y1 = (event.y // pixel_size) * pixel_size
         x2 = x1 + pixel_size
@@ -123,7 +114,6 @@ def Clear():
         current_layer.image.paste((255, 255, 255, 0), (0, 0, canvas_width, canvas_height))
         current_layer.draw = ImageDraw.Draw(current_layer.image)
 
-# Canvas Configuration
 def CanvasColor():
     global eraser_color
     color = colorchooser.askcolor()
@@ -143,7 +133,6 @@ def Save():
             messagebox.showinfo("Tiramisu", f"Image Saved as {file_name}")
     else:
         messagebox.showwarning("Tiramisu", "No layers to save")
-
 
 def SelectColor(col):
     global pen_color
@@ -166,6 +155,47 @@ def rename_layer():
                 update_layers_list()
         except Exception as e:
             messagebox.showerror("Error", f"Failed to rename layer: {e}")
+
+# Lasso Tool
+def lasso_select(event):
+    global lasso_active, lasso_points
+    lasso_active = True
+    x, y = event.x, event.y
+    lasso_points.append((x, y))
+    if len(lasso_points) > 1:
+        current_layer.create_line(lasso_points[-2], lasso_points[-1], fill="red")
+
+def finalize_lasso(event):
+    global lasso_active, lasso_points
+    if lasso_points:
+        lasso_active = False
+        current_layer.create_polygon(lasso_points, outline="red", fill="")
+        # Placeholder for cutting/copying the selected region
+        lasso_points = []
+
+# Bucket Paint Tool
+def bucket_fill(event):
+    if current_layer:
+        x, y = event.x, event.y
+        target_color = np.array(current_layer.image.getpixel((x, y)))
+        fill_color = np.array(ImageColor.getrgb(pen_color))
+
+        if np.array_equal(target_color, fill_color):
+            return
+
+        stack = [(x, y)]
+        while stack:
+            nx, ny = stack.pop()
+            if 0 <= nx < canvas_width and 0 <= ny < canvas_height:
+                current_color = np.array(current_layer.image.getpixel((nx, ny)))
+                if np.array_equal(current_color, target_color):
+                    current_layer.image.putpixel((nx, ny), tuple(fill_color))
+                    stack.extend([(nx-1, ny), (nx+1, ny), (nx, ny-1), (nx, ny+1)])
+
+        # Update the canvas with the filled image
+        img = ImageTk.PhotoImage(current_layer.image)
+        current_layer.create_image(0, 0, image=img, anchor=NW)
+        current_layer.image_tk = img  # Keep a reference to prevent garbage collection
 
 # Frames
 color_frame = LabelFrame(window, text="Color", relief=FLAT, bg=tool_frame_color, fg=button_fg, font=("Arial", 12))
@@ -234,6 +264,12 @@ eraser_b3.grid(row=0, column=2, padx=5)
 clear_b4 = Button(tool_frame, text="Clear", relief=FLAT, bg=button_bg, fg=button_fg, command=Clear)
 clear_b4.grid(row=0, column=3, padx=5)
 
+lasso_b5 = Button(tool_frame, text="Lasso", relief=FLAT, bg=button_bg, fg=button_fg, command=lambda: current_layer.bind("<Button-1>", lasso_select))
+lasso_b5.grid(row=0, column=4, padx=5)
+
+bucket_b6 = Button(tool_frame, text="Bucket", relief=FLAT, bg=button_bg, fg=button_fg, command=lambda: current_layer.bind("<Button-1>", bucket_fill))
+bucket_b6.grid(row=0, column=5, padx=5)
+
 # Pixel Size Control
 pixel_size_scale = Scale(size_frame, orient=HORIZONTAL, from_=5, to=50, length=170, bg=tool_frame_color, fg=button_fg, troughcolor=highlight_bg, highlightbackground=bg_color)
 pixel_size_scale.set(pixel_size)
@@ -250,5 +286,8 @@ window.configure(bg=bg_color)
 
 # Initialize with one layer
 add_layer()
+
+# Bind lasso finalize function
+window.bind("<ButtonRelease-1>", finalize_lasso)
 
 window.mainloop()
