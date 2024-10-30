@@ -156,7 +156,6 @@ def rename_layer():
         except Exception as e:
             messagebox.showerror("Error", f"Failed to rename layer: {e}")
 
-# Lasso Tool
 def lasso_select(event):
     global lasso_active, lasso_points
     lasso_active = True
